@@ -63,6 +63,8 @@ apt-get install -y \
     python3-venv \
     python3-dev \
     python3-setuptools \
+    python3-pil \
+    python3-pil.imagetk \
     git \
     cython3 \
     libgraphicsmagick++-dev \
