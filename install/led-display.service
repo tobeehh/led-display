@@ -17,7 +17,7 @@ StandardError=journal
 Environment=PYTHONUNBUFFERED=1
 
 # Resource limits
-MemoryLimit=256M
+MemoryMax=256M
 
 [Install]
 WantedBy=multi-user.target

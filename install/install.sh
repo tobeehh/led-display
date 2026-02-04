@@ -111,7 +111,7 @@ check_status "Files copied"
 echo
 echo -e "${YELLOW}Step 5: Creating Python virtual environment...${NC}"
 cd "$INSTALL_DIR"
-python3 -m venv venv
+python3 -m venv --system-site-packages venv
 source venv/bin/activate
 check_status "Virtual environment"
 
