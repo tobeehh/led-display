@@ -1,0 +1,30 @@
+[Unit]
+Description=LED Matrix Display System
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/led-display
+ExecStart=/opt/led-display/venv/bin/python -m ledmatrix --config /opt/led-display/config/config.yaml
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Security (relaxed for GPIO access)
+ProtectSystem=false
+PrivateTmp=true
+NoNewPrivileges=false
+
+# Resource limits
+MemoryMax=256M
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

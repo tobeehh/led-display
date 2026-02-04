@@ -1,0 +1,99 @@
+# LED Matrix Display System Configuration
+# Copy this file to config.yaml and customize
+
+# Display settings for P4 64x32 panels with FM6126A driver
+display:
+  rows: 32
+  cols: 64
+  chain_length: 2
+  parallel: 1
+  hardware_mapping: "adafruit-hat"
+  gpio_slowdown: 4
+  brightness: 50
+
+  # FM6126A specific (CRITICAL - do not change unless using different panels)
+  panel_type: "FM6126A"
+  row_address_type: 3  # ABC addressing
+
+  # Pixel mapping for vertical stacking
+  pixel_mapper_config: "U-mapper"
+
+  # PWM settings
+  pwm_bits: 11
+  pwm_lsb_nanoseconds: 130
+  scan_mode: 1
+  multiplexing: 0
+
+# GPIO button settings
+button:
+  pin: 17
+  long_press_duration: 3.0
+  debounce_time: 0.05
+
+# Network/WiFi settings
+network:
+  ap_ssid: "LED-Display-Setup"
+  ap_password: null  # null = open network
+  ap_channel: 6
+  ap_ip: "192.168.4.1"
+  captive_portal_port: 80
+
+# Web server settings
+web:
+  host: "0.0.0.0"
+  port: 80
+  require_auth: true
+  session_lifetime: 86400  # 24 hours
+
+# Apps configuration
+apps:
+  active_app: "clock"
+  rotation_enabled: false
+  rotation_interval: 30
+
+  clock:
+    enabled: true
+    format_24h: true
+    show_date: true
+    show_seconds: false
+    color_mode: "auto"
+    color: "#FFFFFF"
+
+  weather:
+    enabled: false
+    api_key: ""  # Get from https://openweathermap.org/api
+    city: "Berlin"
+    units: "metric"
+    update_interval: 600
+
+  stocks:
+    enabled: false
+    tickers: "AAPL,GOOGL,BTC-USD,ETH-USD"
+    rotation_interval: 10
+    update_interval: 300
+    display_mode: "logo"
+    currency: "USD"
+
+  spotify:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+    refresh_token: ""
+    show_album_art: true
+
+  text:
+    enabled: true
+    message: "Hello World!"
+    scroll: true
+    scroll_speed: 30
+    style: "modern"
+    color: "#00D4FF"
+    size: "large"
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "simple"
+  file: null  # Set to path for file logging, e.g., "/var/log/led-display.log"
+  max_size_mb: 10
+  backup_count: 3
