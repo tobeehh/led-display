@@ -63,6 +63,7 @@ apt-get install -y \
     python3-venv \
     python3-dev \
     git \
+    cython3 \
     libgraphicsmagick++-dev \
     libwebp-dev \
     hostapd \
