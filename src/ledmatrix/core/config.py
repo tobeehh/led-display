@@ -160,6 +160,18 @@ class TextAppConfig(BaseModel):
     size: str = Field("large", description="Font size: small, large")
 
 
+class WordClockAppConfig(BaseModel):
+    """Word Clock (QLOCKTWO-style) app settings."""
+
+    enabled: bool = True
+    color_mode: str = Field("auto", description="Color mode: auto, static")
+    color: str = Field("#FFFFFF", description="Static color (hex)")
+    dim_factor: int = Field(8, ge=0, le=30, description="Inactive letter brightness %")
+    transition_speed: str = Field("normal", description="Transition: instant, fast, normal, slow")
+    show_dots: bool = Field(True, description="Show minute precision dots")
+    dialect: str = Field("standard", description="Dialect: standard, regional")
+
+
 class AppsConfig(BaseModel):
     """Apps management configuration."""
 
@@ -169,6 +181,7 @@ class AppsConfig(BaseModel):
 
     # Individual app configs
     clock: ClockAppConfig = Field(default_factory=ClockAppConfig)
+    wordclock: WordClockAppConfig = Field(default_factory=WordClockAppConfig)
     weather: WeatherAppConfig = Field(default_factory=WeatherAppConfig)
     stocks: StocksAppConfig = Field(default_factory=StocksAppConfig)
     spotify: SpotifyAppConfig = Field(default_factory=SpotifyAppConfig)

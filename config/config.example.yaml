@@ -59,6 +59,15 @@ apps:
     color_mode: "auto"
     color: "#FFFFFF"
 
+  wordclock:
+    enabled: true
+    color_mode: "auto"       # auto = time-based colors, static = fixed color
+    color: "#FFFFFF"         # Color for static mode
+    dim_factor: 8            # Brightness of inactive letters (0-30%)
+    transition_speed: "normal"  # instant, fast, normal, slow
+    show_dots: true          # Show corner minute dots
+    dialect: "standard"      # standard = "VIERTEL NACH", regional = "DREIVIERTEL"
+
   weather:
     enabled: false
     api_key: ""  # Get from https://openweathermap.org/api

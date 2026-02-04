@@ -6,6 +6,7 @@ A modern, robust IoT display system for Raspberry Pi with RGB LED matrix panels.
 
 - **Display Apps**
   - Clock with date and time-based color transitions
+  - Word Clock (QLOCKTWO-style German word display)
   - Weather (OpenWeatherMap integration)
   - Stock/Crypto ticker (Yahoo Finance)
   - Spotify Now Playing with album art

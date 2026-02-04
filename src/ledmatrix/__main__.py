@@ -106,6 +106,7 @@ class LEDDisplaySystem:
         """Initialize and start the app scheduler."""
         from .apps.scheduler import init_app_scheduler
         from .apps.clock import ClockApp
+        from .apps.wordclock import WordClockApp
         from .apps.weather import WeatherApp
         from .apps.stocks import StocksApp
         from .apps.spotify import SpotifyApp
@@ -122,6 +123,7 @@ class LEDDisplaySystem:
 
         # Register apps with their configs
         self._app_scheduler.register_app(ClockApp(config.apps.clock.model_dump()))
+        self._app_scheduler.register_app(WordClockApp(config.apps.wordclock.model_dump()))
         self._app_scheduler.register_app(WeatherApp(config.apps.weather.model_dump()))
         self._app_scheduler.register_app(StocksApp(config.apps.stocks.model_dump()))
         self._app_scheduler.register_app(SpotifyApp(config.apps.spotify.model_dump()))
