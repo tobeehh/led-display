@@ -16,6 +16,10 @@ NC='\033[0m' # No Color
 INSTALL_DIR="/opt/led-display"
 SERVICE_NAME="led-display"
 
+# Determine source directory early (before any cd commands)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_DIR="$(dirname "$SCRIPT_DIR")"
+
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  LED Display System Installer${NC}"
 echo -e "${GREEN}========================================${NC}"
@@ -92,14 +96,12 @@ echo
 echo -e "${YELLOW}Step 4: Setting up installation directory...${NC}"
 mkdir -p "$INSTALL_DIR"
 
-# Copy files from current directory or parent directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_DIR="$(dirname "$SCRIPT_DIR")"
-
+# Copy files from source directory
+echo "Source directory: $SOURCE_DIR"
 if [ -f "$SOURCE_DIR/main.py" ]; then
     cp -r "$SOURCE_DIR"/* "$INSTALL_DIR/"
 else
-    echo -e "${RED}Error: Source files not found${NC}"
+    echo -e "${RED}Error: Source files not found in $SOURCE_DIR${NC}"
     echo "Please run this script from the install directory"
     exit 1
 fi
