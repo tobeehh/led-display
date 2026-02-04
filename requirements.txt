@@ -1,5 +1,5 @@
 # LED Matrix Control
-rpi-rgb-led-matrix>=1.0.0
+# rpi-rgb-led-matrix is installed from source by install.sh
 
 # Web Framework
 Flask>=3.0.0
