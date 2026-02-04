@@ -100,6 +100,7 @@ setup_install_dir() {
     if [ -f "$SOURCE_DIR/pyproject.toml" ]; then
         cp -r "$SOURCE_DIR/src" "$INSTALL_DIR/"
         cp "$SOURCE_DIR/pyproject.toml" "$INSTALL_DIR/"
+        cp "$SOURCE_DIR/README.md" "$INSTALL_DIR/"
 
         # Copy example config if no config exists
         if [ ! -f "$INSTALL_DIR/config/config.yaml" ]; then
