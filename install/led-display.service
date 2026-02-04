@@ -1,0 +1,23 @@
+[Unit]
+Description=LED Display System
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/led-display
+ExecStart=/opt/led-display/venv/bin/python /opt/led-display/main.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=PYTHONUNBUFFERED=1
+
+# Resource limits
+MemoryLimit=256M
+
+[Install]
+WantedBy=multi-user.target

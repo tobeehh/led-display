@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}WiFi Configuration - LED Display{% endblock %}
+
+{% block content %}
+<div class="wifi-config">
+    <h1>WiFi Configuration</h1>
+
+    <!-- Current Connection -->
+    <section class="card">
+        <h2>Current Connection</h2>
+        <div class="status-grid">
+            <div class="status-item">
+                <span class="label">Status:</span>
+                <span class="value {% if connection_info.connected %}connected{% else %}disconnected{% endif %}">
+                    {{ 'Connected' if connection_info.connected else 'Disconnected' }}
+                </span>
+            </div>
+            {% if connection_info.connected %}
+            <div class="status-item">
+                <span class="label">Network:</span>
+                <span class="value">{{ connection_info.ssid }}</span>
+            </div>
+            <div class="status-item">
+                <span class="label">IP Address:</span>
+                <span class="value">{{ connection_info.ip_address }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% if connection_info.connected %}
+        <div class="btn-group">
+            <form action="/wifi/disconnect" method="POST" class="inline-form">
+                <button type="submit" class="btn btn-warning">Disconnect</button>
+            </form>
+            <form action="/wifi/forget" method="POST" class="inline-form">
+                <button type="submit" class="btn btn-danger">Forget Network</button>
+            </form>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Available Networks -->
+    <section class="card">
+        <h2>Available Networks</h2>
+        <button type="button" class="btn btn-secondary" onclick="scanNetworks()">Scan</button>
+
+        <div id="network-list" class="network-list">
+            {% for network in networks %}
+            <div class="network-item" onclick="selectNetwork('{{ network.ssid }}')">
+                <div class="network-info">
+                    <span class="network-name">{{ network.ssid }}</span>
+                    <span class="network-security">{{ network.security }}</span>
+                </div>
+                <div class="signal-strength" title="{{ network.signal }}%">
+                    <div class="signal-bar" style="height: {{ network.signal }}%"></div>
+                </div>
+            </div>
+            {% else %}
+            <p class="no-networks">No networks found. Click Scan to search.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Connect Form -->
+    <section class="card">
+        <h2>Connect to Network</h2>
+        <form action="/wifi/connect" method="POST" id="connect-form">
+            <div class="form-group">
+                <label for="ssid">Network Name (SSID)</label>
+                <input type="text" id="ssid" name="ssid" required placeholder="Enter network name">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password">
+            </div>
+            <button type="submit" class="btn btn-primary">Connect</button>
+        </form>
+        <div id="connect-status" class="status-message"></div>
+    </section>
+
+    <!-- Captive Portal -->
+    <section class="card">
+        <h2>Captive Portal</h2>
+        <p>Start a WiFi access point for easy device setup.</p>
+        <form action="/wifi/captive-portal/start" method="POST">
+            <button type="submit" class="btn btn-secondary">Start Captive Portal</button>
+        </form>
+    </section>
+</div>
+
+<script>
+function selectNetwork(ssid) {
+    document.getElementById('ssid').value = ssid;
+    document.getElementById('password').focus();
+}
+
+function scanNetworks() {
+    const list = document.getElementById('network-list');
+    list.innerHTML = '<p class="loading">Scanning...</p>';
+
+    fetch('/wifi/scan')
+        .then(response => response.json())
+        .then(data => {
+            if (data.networks.length === 0) {
+                list.innerHTML = '<p class="no-networks">No networks found.</p>';
+                return;
+            }
+
+            let html = '';
+            data.networks.forEach(network => {
+                html += `
+                    <div class="network-item" onclick="selectNetwork('${network.ssid}')">
+                        <div class="network-info">
+                            <span class="network-name">${network.ssid}</span>
+                            <span class="network-security">${network.security}</span>
+                        </div>
+                        <div class="signal-strength" title="${network.signal}%">
+                            <div class="signal-bar" style="height: ${network.signal}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        })
+        .catch(error => {
+            list.innerHTML = '<p class="error">Scan failed. Please try again.</p>';
+        });
+}
+
+document.getElementById('connect-form').addEventListener('submit', function(e) {
+    const status = document.getElementById('connect-status');
+    status.textContent = 'Connecting...';
+    status.className = 'status-message loading';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LED Display{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Dashboard</h1>
+
+    <!-- Network Status -->
+    <section class="card">
+        <h2>Network Status</h2>
+        <div class="status-grid">
+            <div class="status-item">
+                <span class="label">Status:</span>
+                <span class="value {% if network_info.connected %}connected{% else %}disconnected{% endif %}">
+                    {{ 'Connected' if network_info.connected else 'Disconnected' }}
+                </span>
+            </div>
+            {% if network_info.connected %}
+            <div class="status-item">
+                <span class="label">Network:</span>
+                <span class="value">{{ network_info.ssid }}</span>
+            </div>
+            <div class="status-item">
+                <span class="label">IP Address:</span>
+                <span class="value">{{ network_info.ip_address }}</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Internet:</span>
+                <span class="value {% if network_info.has_internet %}connected{% else %}disconnected{% endif %}">
+                    {{ 'Yes' if network_info.has_internet else 'No' }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        <a href="/wifi" class="btn btn-secondary">Configure WiFi</a>
+    </section>
+
+    <!-- Active App -->
+    <section class="card">
+        <h2>Active App</h2>
+        <div class="active-app-display">
+            {% if active_app and apps[active_app] %}
+            <h3>{{ apps[active_app].display_name }}</h3>
+            <p>{{ apps[active_app].description }}</p>
+            {% else %}
+            <p>No app active</p>
+            {% endif %}
+        </div>
+        <div class="btn-group">
+            <form action="/app/next" method="POST" class="inline-form">
+                <button type="submit" class="btn btn-primary">Next App</button>
+            </form>
+            <a href="/apps" class="btn btn-secondary">Manage Apps</a>
+        </div>
+    </section>
+
+    <!-- Quick App Switch -->
+    <section class="card">
+        <h2>Quick Switch</h2>
+        <div class="app-grid">
+            {% for name, app in apps.items() %}
+            {% if app.enabled %}
+            <form action="/app/{{ name }}/activate" method="POST" class="app-card {% if name == active_app %}active{% endif %}">
+                <button type="submit" class="app-button">
+                    <span class="app-name">{{ app.display_name }}</span>
+                </button>
+            </form>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Brightness Control -->
+    <section class="card">
+        <h2>Display</h2>
+        <div class="brightness-control">
+            <label for="brightness">Brightness: <span id="brightness-value">{{ brightness }}%</span></label>
+            <input type="range" id="brightness" name="brightness" min="0" max="100" value="{{ brightness }}"
+                   oninput="updateBrightness(this.value)">
+        </div>
+        <form action="/system/test-display" method="POST" class="inline-form">
+            <button type="submit" class="btn btn-secondary">Test Display</button>
+        </form>
+    </section>
+</div>
+
+<script>
+function updateBrightness(value) {
+    document.getElementById('brightness-value').textContent = value + '%';
+
+    fetch('/system/brightness', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'brightness=' + value
+    });
+}
+</script>
+{% endblock %}
