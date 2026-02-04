@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% set active_page = 'dashboard' %}
+
+{% block title %}Dashboard - LED Display{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Dashboard</h1>
+
+<!-- Status Card -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2 class="card-title">Status</h2>
+        <span class="status-dot online" id="statusDot"></span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+        <div>
+            <div class="text-muted mb-1">Active App</div>
+            <div style="font-size: 20px; font-weight: 600;" id="activeApp">-</div>
+        </div>
+        <div>
+            <div class="text-muted mb-1">Brightness</div>
+            <div style="font-size: 20px; font-weight: 600;" id="brightness">-</div>
+        </div>
+        <div>
+            <div class="text-muted mb-1">Network</div>
+            <div style="font-size: 20px; font-weight: 600;" id="networkStatus">-</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Controls -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2 class="card-title">Quick Controls</h2>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Brightness</label>
+        <div class="range-container">
+            <input type="range" class="range-input" id="brightnessSlider" min="0" max="100" value="50">
+            <span class="range-value" id="brightnessValue">50%</span>
+        </div>
+    </div>
+    <div class="mt-2">
+        <button class="btn btn-secondary" onclick="previousApp()">Previous App</button>
+        <button class="btn btn-primary" onclick="nextApp()">Next App</button>
+    </div>
+</div>
+
+<!-- Apps Overview -->
+<h2 class="mb-2">Apps</h2>
+<div class="apps-grid" id="appsGrid">
+    <div class="loading"><div class="spinner"></div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadStatus();
+    loadApps();
+    setInterval(loadStatus, 5000);
+
+    // Brightness slider
+    const slider = document.getElementById('brightnessSlider');
+    slider.addEventListener('input', (e) => {
+        document.getElementById('brightnessValue').textContent = e.target.value + '%';
+    });
+    slider.addEventListener('change', (e) => {
+        setBrightness(parseInt(e.target.value));
+    });
+});
+</script>
+{% endblock %}

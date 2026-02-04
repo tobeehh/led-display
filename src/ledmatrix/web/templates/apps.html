@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% set active_page = 'apps' %}
+
+{% block title %}Apps - LED Display{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">App Configuration</h1>
+
+<div class="alert alert-info mb-3" id="alertBox" style="display: none;">
+    <span id="alertMessage"></span>
+</div>
+
+<!-- Apps List -->
+<div id="appsList">
+    <div class="loading"><div class="spinner"></div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadAppsDetailed();
+});
+
+async function loadAppsDetailed() {
+    try {
+        const resp = await fetch('/api/apps');
+        const data = await resp.json();
+        renderAppsList(data.apps);
+    } catch (e) {
+        document.getElementById('appsList').innerHTML = '<div class="alert alert-error">Failed to load apps</div>';
+    }
+}
+
+function renderAppsList(apps) {
+    const container = document.getElementById('appsList');
+    container.innerHTML = '';
+
+    apps.forEach(app => {
+        const card = document.createElement('div');
+        card.className = 'card mb-3';
+        card.innerHTML = `
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">${app.display_name}</h2>
+                    <p class="card-subtitle">${app.description}</p>
+                </div>
+                <div class="app-status">
+                    ${app.active ? '<span class="status-badge active">Active</span>' : ''}
+                    ${!app.active ? `<button class="btn btn-primary btn-sm" onclick="activateApp('${app.name}')">Activate</button>` : ''}
+                </div>
+            </div>
+            <div class="app-card-body">
+                <form id="form-${app.name}" onsubmit="return saveAppConfig(event, '${app.name}')">
+                    ${renderConfigForm(app.config_schema, app.current_config)}
+                    <div class="mt-2" style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-success">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function renderConfigForm(schema, currentConfig) {
+    let html = '';
+
+    for (const [key, field] of Object.entries(schema)) {
+        const value = currentConfig[key] ?? field.default ?? '';
+        html += renderFormField(key, field, value);
+    }
+
+    return html || '<p class="text-muted">No configurable settings</p>';
+}
+
+function renderFormField(key, field, value) {
+    const label = field.label || key;
+    const description = field.description || '';
+    const required = field.required ? '<span class="required">*</span>' : '';
+
+    let input = '';
+
+    switch (field.type) {
+        case 'bool':
+            input = `
+                <div class="toggle-container">
+                    <div>
+                        <label class="form-label mb-0">${label} ${required}</label>
+                        ${description ? `<div class="form-help">${description}</div>` : ''}
+                    </div>
+                    <label class="toggle">
+                        <input type="checkbox" name="${key}" ${value ? 'checked' : ''}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            `;
+            break;
+
+        case 'select':
+            const options = (field.options || []).map(opt =>
+                `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`
+            ).join('');
+            input = `
+                <label class="form-label">${label} ${required}</label>
+                <select class="form-select" name="${key}">${options}</select>
+                ${description ? `<div class="form-help">${description}</div>` : ''}
+            `;
+            break;
+
+        case 'color':
+            input = `
+                <label class="form-label">${label} ${required}</label>
+                <div class="color-input-wrapper">
+                    <input type="color" value="${value || '#FFFFFF'}" onchange="this.nextElementSibling.value = this.value">
+                    <input type="text" class="form-input" name="${key}" value="${value || '#FFFFFF'}"
+                           pattern="^#[0-9A-Fa-f]{6}$" placeholder="#FFFFFF"
+                           onchange="this.previousElementSibling.value = this.value">
+                </div>
+                ${description ? `<div class="form-help">${description}</div>` : ''}
+            `;
+            break;
+
+        case 'int':
+            const min = field.min_value !== null ? field.min_value : '';
+            const max = field.max_value !== null ? field.max_value : '';
+
+            if (min !== '' && max !== '' && (max - min) <= 100) {
+                // Use range slider for bounded integers
+                input = `
+                    <label class="form-label">${label} ${required}</label>
+                    <div class="range-container">
+                        <input type="range" class="range-input" name="${key}"
+                               min="${min}" max="${max}" value="${value || min}"
+                               oninput="this.nextElementSibling.textContent = this.value + (this.dataset.unit || '')">
+                        <span class="range-value">${value || min}${key.includes('factor') || key.includes('brightness') ? '%' : ''}</span>
+                    </div>
+                    ${description ? `<div class="form-help">${description}</div>` : ''}
+                `;
+            } else {
+                input = `
+                    <label class="form-label">${label} ${required}</label>
+                    <input type="number" class="form-input" name="${key}" value="${value || ''}"
+                           ${min !== '' ? `min="${min}"` : ''} ${max !== '' ? `max="${max}"` : ''}>
+                    ${description ? `<div class="form-help">${description}</div>` : ''}
+                `;
+            }
+            break;
+
+        case 'password':
+            input = `
+                <label class="form-label">${label} ${required}</label>
+                <input type="password" class="form-input" name="${key}" value="${value || ''}"
+                       placeholder="Enter to change...">
+                ${description ? `<div class="form-help">${description}</div>` : ''}
+            `;
+            break;
+
+        case 'string':
+        default:
+            input = `
+                <label class="form-label">${label} ${required}</label>
+                <input type="text" class="form-input" name="${key}" value="${value || ''}"
+                       placeholder="${field.default || ''}">
+                ${description ? `<div class="form-help">${description}</div>` : ''}
+            `;
+            break;
+    }
+
+    return `<div class="form-group">${input}</div>`;
+}
+
+async function saveAppConfig(event, appName) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const settings = {};
+    for (const [key, value] of formData.entries()) {
+        settings[key] = value;
+    }
+
+    // Handle checkboxes (unchecked ones don't appear in FormData)
+    form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        settings[cb.name] = cb.checked;
+    });
+
+    // Convert numeric fields
+    form.querySelectorAll('input[type="number"], input[type="range"]').forEach(input => {
+        if (settings[input.name] !== undefined) {
+            settings[input.name] = parseInt(settings[input.name]) || 0;
+        }
+    });
+
+    try {
+        const resp = await fetch(`/api/apps/${appName}/config`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: true, settings })
+        });
+
+        if (resp.ok) {
+            showAlert('Settings saved successfully!', 'success');
+        } else {
+            const data = await resp.json();
+            showAlert(data.detail || 'Failed to save settings', 'error');
+        }
+    } catch (e) {
+        showAlert('Connection error', 'error');
+    }
+
+    return false;
+}
+
+async function activateApp(appName) {
+    try {
+        const resp = await fetch(`/api/apps/${appName}/activate`, { method: 'POST' });
+        if (resp.ok) {
+            showAlert(`Activated: ${appName}`, 'success');
+            loadAppsDetailed();
+        }
+    } catch (e) {
+        showAlert('Failed to activate app', 'error');
+    }
+}
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const alertMessage = document.getElementById('alertMessage');
+
+    alertBox.className = `alert alert-${type} mb-3`;
+    alertMessage.textContent = message;
+    alertBox.style.display = 'flex';
+
+    setTimeout(() => {
+        alertBox.style.display = 'none';
+    }, 3000);
+}
+</script>
+{% endblock %}

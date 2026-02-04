@@ -14,6 +14,7 @@ from ..schemas import (
     AppsListResponse,
     AppConfigRequest,
     ActivateAppRequest,
+    RotationRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -210,3 +211,30 @@ async def previous_app() -> APIResponse:
         )
     else:
         raise HTTPException(status_code=404, detail="No apps available")
+
+
+@router.post("/rotation")
+async def set_rotation(request: RotationRequest) -> APIResponse:
+    """Configure app rotation settings."""
+    from ...apps import get_app_scheduler
+
+    scheduler = get_app_scheduler()
+    if scheduler:
+        scheduler.set_rotation(request.enabled, request.interval)
+
+    # Persist to config
+    config_manager = get_config_manager()
+    config_manager.update(
+        apps={
+            "rotation_enabled": request.enabled,
+            "rotation_interval": request.interval,
+        }
+    )
+
+    logger.info("Rotation settings updated: enabled=%s, interval=%d", request.enabled, request.interval)
+
+    return APIResponse(
+        success=True,
+        message="Rotation settings updated",
+        data={"enabled": request.enabled, "interval": request.interval},
+    )

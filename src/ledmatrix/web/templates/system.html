@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% set active_page = 'system' %}
+
+{% block title %}System - LED Display{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">System Settings</h1>
+
+<div class="alert alert-info mb-3" id="alertBox" style="display: none;">
+    <span id="alertMessage"></span>
+</div>
+
+<!-- Display Settings -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2 class="card-title">Display Settings</h2>
+    </div>
+    <form id="displayForm" onsubmit="return saveDisplaySettings(event)">
+        <div class="form-group">
+            <label class="form-label">Brightness</label>
+            <div class="range-container">
+                <input type="range" class="range-input" name="brightness" id="sysBrightness"
+                       min="0" max="100" value="50"
+                       oninput="document.getElementById('sysBrightnessValue').textContent = this.value + '%'">
+                <span class="range-value" id="sysBrightnessValue">50%</span>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">Save Display Settings</button>
+    </form>
+</div>
+
+<!-- App Rotation -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2 class="card-title">App Rotation</h2>
+    </div>
+    <form id="rotationForm" onsubmit="return saveRotationSettings(event)">
+        <div class="form-group">
+            <div class="toggle-container">
+                <div>
+                    <label class="form-label mb-0">Auto-Rotate Apps</label>
+                    <div class="form-help">Automatically cycle through enabled apps</div>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" name="enabled" id="rotationEnabled">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Rotation Interval</label>
+            <div class="range-container">
+                <input type="range" class="range-input" name="interval" id="rotationInterval"
+                       min="5" max="300" value="30"
+                       oninput="document.getElementById('rotationValue').textContent = this.value + 's'">
+                <span class="range-value" id="rotationValue">30s</span>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">Save Rotation Settings</button>
+    </form>
+</div>
+
+<!-- System Info -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2 class="card-title">System Information</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+        <div>
+            <div class="text-muted mb-1">Version</div>
+            <div style="font-weight: 600;">1.0.0</div>
+        </div>
+        <div>
+            <div class="text-muted mb-1">Uptime</div>
+            <div style="font-weight: 600;" id="uptime">-</div>
+        </div>
+        <div>
+            <div class="text-muted mb-1">Display</div>
+            <div style="font-weight: 600;">64x64 (2x P4 32x64)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Danger Zone -->
+<div class="card" style="border-color: var(--error);">
+    <div class="card-header">
+        <h2 class="card-title" style="color: var(--error);">Danger Zone</h2>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="restartService()">Restart Service</button>
+        <button class="btn btn-secondary" onclick="rebootSystem()">Reboot System</button>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadSystemStatus();
+    setInterval(loadSystemStatus, 10000);
+});
+
+async function loadSystemStatus() {
+    try {
+        const resp = await fetch('/api/status');
+        const data = await resp.json();
+
+        document.getElementById('sysBrightness').value = data.brightness;
+        document.getElementById('sysBrightnessValue').textContent = data.brightness + '%';
+
+        document.getElementById('rotationEnabled').checked = data.rotation_enabled;
+        document.getElementById('rotationInterval').value = data.rotation_interval;
+        document.getElementById('rotationValue').textContent = data.rotation_interval + 's';
+
+        // Format uptime
+        const uptime = Math.floor(data.uptime);
+        const hours = Math.floor(uptime / 3600);
+        const minutes = Math.floor((uptime % 3600) / 60);
+        document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+    } catch (e) {
+        console.error('Failed to load system status:', e);
+    }
+}
+
+async function saveDisplaySettings(event) {
+    event.preventDefault();
+    const brightness = parseInt(document.getElementById('sysBrightness').value);
+
+    try {
+        const resp = await fetch('/api/display/brightness', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ brightness })
+        });
+
+        if (resp.ok) {
+            showAlert('Display settings saved', 'success');
+        } else {
+            showAlert('Failed to save settings', 'error');
+        }
+    } catch (e) {
+        showAlert('Connection error', 'error');
+    }
+
+    return false;
+}
+
+async function saveRotationSettings(event) {
+    event.preventDefault();
+    const enabled = document.getElementById('rotationEnabled').checked;
+    const interval = parseInt(document.getElementById('rotationInterval').value);
+
+    try {
+        const resp = await fetch('/api/apps/rotation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled, interval })
+        });
+
+        if (resp.ok) {
+            showAlert('Rotation settings saved', 'success');
+        } else {
+            showAlert('Failed to save settings', 'error');
+        }
+    } catch (e) {
+        showAlert('Connection error', 'error');
+    }
+
+    return false;
+}
+
+async function restartService() {
+    if (!confirm('Restart the LED Display service?')) return;
+
+    try {
+        await fetch('/api/system/restart', { method: 'POST' });
+        showAlert('Service restarting...', 'info');
+    } catch (e) {
+        showAlert('Failed to restart service', 'error');
+    }
+}
+
+async function rebootSystem() {
+    if (!confirm('Reboot the entire system? This will take about a minute.')) return;
+
+    try {
+        await fetch('/api/system/reboot', { method: 'POST' });
+        showAlert('System rebooting...', 'info');
+    } catch (e) {
+        showAlert('Failed to reboot system', 'error');
+    }
+}
+
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        location.href = '/login';
+    } catch (e) {
+        location.href = '/login';
+    }
+}
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const alertMessage = document.getElementById('alertMessage');
+
+    alertBox.className = `alert alert-${type} mb-3`;
+    alertMessage.textContent = message;
+    alertBox.style.display = 'flex';
+
+    setTimeout(() => {
+        alertBox.style.display = 'none';
+    }, 3000);
+}
+</script>
+{% endblock %}

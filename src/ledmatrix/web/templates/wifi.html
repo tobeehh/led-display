@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% set active_page = 'wifi' %}
+
+{% block title %}WiFi - LED Display{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">WiFi Configuration</h1>
+
+<div class="alert alert-info mb-3" id="alertBox" style="display: none;">
+    <span id="alertMessage"></span>
+</div>
+
+<!-- Current Status -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2 class="card-title">Current Connection</h2>
+        <span class="status-dot" id="wifiStatusDot"></span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+        <div>
+            <div class="text-muted mb-1">Status</div>
+            <div style="font-size: 18px; font-weight: 600;" id="wifiStatus">Loading...</div>
+        </div>
+        <div>
+            <div class="text-muted mb-1">Network</div>
+            <div style="font-size: 18px; font-weight: 600;" id="wifiSSID">-</div>
+        </div>
+        <div>
+            <div class="text-muted mb-1">IP Address</div>
+            <div style="font-size: 18px; font-weight: 600;" id="wifiIP">-</div>
+        </div>
+    </div>
+</div>
+
+<!-- Available Networks -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Available Networks</h2>
+        <button class="btn btn-secondary btn-sm" onclick="scanNetworks()">Scan</button>
+    </div>
+    <div id="networksList">
+        <div class="loading"><div class="spinner"></div></div>
+    </div>
+</div>
+
+<!-- Connect Modal -->
+<div class="modal-overlay" id="wifiModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="wifiModalTitle">Connect to Network</h2>
+            <button class="modal-close" onclick="closeWifiModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="wifiForm" onsubmit="return connectWifi(event)">
+                <input type="hidden" id="wifiSSIDInput" name="ssid">
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="wifiPassword" name="password"
+                           placeholder="Enter WiFi password">
+                    <div class="form-help">Leave empty for open networks</div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeWifiModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="document.getElementById('wifiForm').requestSubmit()">Connect</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadWifiStatus();
+    scanNetworks();
+    setInterval(loadWifiStatus, 5000);
+});
+
+async function loadWifiStatus() {
+    try {
+        const resp = await fetch('/api/wifi/status');
+        const data = await resp.json();
+
+        document.getElementById('wifiStatus').textContent = data.connected ? 'Connected' : 'Disconnected';
+        document.getElementById('wifiSSID').textContent = data.ssid || '-';
+        document.getElementById('wifiIP').textContent = data.ip_address || '-';
+
+        const dot = document.getElementById('wifiStatusDot');
+        dot.className = 'status-dot ' + (data.connected ? 'online' : 'offline');
+    } catch (e) {
+        console.error('Failed to load WiFi status:', e);
+    }
+}
+
+async function scanNetworks() {
+    const list = document.getElementById('networksList');
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const resp = await fetch('/api/wifi/networks');
+        const data = await resp.json();
+        renderNetworksList(data.networks);
+    } catch (e) {
+        list.innerHTML = '<div class="alert alert-error">Failed to scan networks</div>';
+    }
+}
+
+function renderNetworksList(networks) {
+    const list = document.getElementById('networksList');
+
+    if (networks.length === 0) {
+        list.innerHTML = '<p class="text-muted">No networks found</p>';
+        return;
+    }
+
+    list.innerHTML = networks.map(net => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <div>
+                <div style="font-weight: 500;">${escapeHtml(net.ssid)} ${net.in_use ? '<span class="text-success">(connected)</span>' : ''}</div>
+                <div class="text-muted" style="font-size: 13px;">
+                    Signal: ${net.signal}% | ${net.security || 'Open'}
+                </div>
+            </div>
+            ${!net.in_use ? `<button class="btn btn-secondary btn-sm" onclick="openWifiModal('${escapeHtml(net.ssid)}')">Connect</button>` : ''}
+        </div>
+    `).join('');
+}
+
+function openWifiModal(ssid) {
+    document.getElementById('wifiModalTitle').textContent = 'Connect to ' + ssid;
+    document.getElementById('wifiSSIDInput').value = ssid;
+    document.getElementById('wifiPassword').value = '';
+    document.getElementById('wifiModal').classList.add('active');
+}
+
+function closeWifiModal() {
+    document.getElementById('wifiModal').classList.remove('active');
+}
+
+async function connectWifi(event) {
+    event.preventDefault();
+
+    const ssid = document.getElementById('wifiSSIDInput').value;
+    const password = document.getElementById('wifiPassword').value;
+
+    try {
+        const resp = await fetch('/api/wifi/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ssid, password })
+        });
+
+        if (resp.ok) {
+            showAlert('Connecting to ' + ssid + '...', 'success');
+            closeWifiModal();
+            setTimeout(loadWifiStatus, 3000);
+            setTimeout(scanNetworks, 5000);
+        } else {
+            const data = await resp.json();
+            showAlert(data.detail || 'Failed to connect', 'error');
+        }
+    } catch (e) {
+        showAlert('Connection error', 'error');
+    }
+
+    return false;
+}
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const alertMessage = document.getElementById('alertMessage');
+
+    alertBox.className = `alert alert-${type} mb-3`;
+    alertMessage.textContent = message;
+    alertBox.style.display = 'flex';
+
+    setTimeout(() => {
+        alertBox.style.display = 'none';
+    }, 5000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeWifiModal();
+});
+</script>
+{% endblock %}
